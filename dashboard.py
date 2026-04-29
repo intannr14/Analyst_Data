@@ -4,32 +4,58 @@ import matplotlib.pyplot as plt
 
 st.title("Dashboard Analisis Review Pelanggan")
 
-# Load data hasil olahan
-df = pd.read_csv('dashboard/main_data.csv')
+# =========================
+# LOAD DATA
+# =========================
+df = pd.read_csv('data/order_reviews_dataset.csv')
+df['review_creation_date'] = pd.to_datetime(df['review_creation_date'])
+df['comment_length'] = df['review_comment_message'].fillna('').str.len()
 
-# Jika belum ada kolom month (opsional)
-if 'month' not in df.columns:
-    df['month'] = df.iloc[:,0]
+# =========================
+# INTERAKTIF (WAJIB)
+# =========================
+st.sidebar.header("Filter")
 
-# Visualisasi 1: Tren Rating
+year = st.sidebar.selectbox(
+    "Pilih Tahun",
+    sorted(df['review_creation_date'].dt.year.unique())
+)
+
+df_filtered = df[df['review_creation_date'].dt.year == year].copy()
+
+# =========================
+# PERTANYAAN 1
+# =========================
 st.subheader("Tren Rata-rata Rating per Bulan")
-st.line_chart(df.set_index('month'))
 
-# Load raw data untuk analisis tambahan
-df_raw = pd.read_csv('data/order_reviews_dataset.csv')
-df_raw['review_creation_date'] = pd.to_datetime(df_raw['review_creation_date'])
+df_filtered['month'] = df_filtered['review_creation_date'].dt.to_period('M')
+monthly = df_filtered.groupby('month')['review_score'].mean()
 
-# Panjang komentar
-df_raw['comment_length'] = df_raw['review_comment_message'].fillna('').str.len()
+st.line_chart(monthly)
 
-low = df_raw[df_raw['review_score'] <= 2]
-high = df_raw[df_raw['review_score'] >= 4]
+st.caption("Menjawab: Tren perubahan rating pelanggan per bulan")
 
-# Visualisasi 2
-st.subheader("Perbandingan Panjang Komentar")
+# =========================
+# PERTANYAAN 2
+# =========================
+st.subheader("Perbandingan Panjang Komentar (Rating Rendah vs Tinggi)")
+
+low = df_filtered[df_filtered['review_score'] <= 2]
+high = df_filtered[df_filtered['review_score'] >= 4]
 
 fig, ax = plt.subplots()
 ax.boxplot([low['comment_length'], high['comment_length']],
            labels=['Rating Rendah', 'Rating Tinggi'])
 
 st.pyplot(fig)
+
+st.caption("Menjawab: Karakteristik komentar berdasarkan rating")
+
+# =========================
+# INSIGHT
+# =========================
+st.markdown("""
+### Insight:
+- Rating pelanggan dapat berubah tergantung periode waktu
+- Pelanggan dengan rating rendah cenderung memberikan komentar lebih panjang
+""")
